@@ -4,6 +4,8 @@ import copy
 import time
 import sys
 
+
+
 # Package import
 from pysap.plugins.mri.reconstruct.fourier import FFT2
 from pysap.plugins.mri.reconstruct.fourier import NFFT2
@@ -33,7 +35,8 @@ def sparse_rec_condatvu(data, wavelet_name, samples, nb_scales=4,
                         mu=1e-6, tau=None, sigma=None, relaxation_factor=1.0,
                         nb_of_reweights=1, max_nb_of_iter=150,
                         add_positivity=False, atol=1e-4, non_cartesian=False,
-                        uniform_data_shape=None, verbose=0):
+                        uniform_data_shape=None, metric_call_period=5, metrics={},
+                        verbose=0):
     """ The Condat-Vu sparse reconstruction with reweightings.
 
     .. note:: At the moment, supports only 2D data.
@@ -225,11 +228,14 @@ def sparse_rec_condatvu(data, wavelet_name, samples, nb_scales=4,
         rho_update=None,
         sigma_update=None,
         tau_update=None,
-        auto_iterate=False)
+        auto_iterate=False,
+        metric_call_period=metric_call_period,
+        metrics=metrics)
 
     # Perform the first reconstruction
     if verbose > 0:
         print("Starting optimization...")
+    # print(sys.path)
     opt.iterate(max_iter=max_nb_of_iter)
 
     # Loop through the number of reweightings
@@ -266,5 +272,4 @@ def sparse_rec_condatvu(data, wavelet_name, samples, nb_scales=4,
     x_final = opt.x_final
     linear_op.transform.analysis_data = unflatten(
         opt.y_final, linear_op.coeffs_shape)
-
-    return x_final, linear_op.transform
+    return x_final, linear_op.transform, opt.metrics

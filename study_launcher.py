@@ -14,6 +14,7 @@ import sys
 import os
 import logging
 
+# sys.path.remove('/home/bs255482/.local/lib/python3.5/site-packages/modopt-1.1.4-py3.5.egg')
 sys.path.insert(0,'/home/bs255482/src/Modopt/ModOpt/')
 
 import argparse
@@ -32,7 +33,7 @@ import pprint
 # from pisap.numerics.gradient import Grad2DAnalysis
 # from pisap.numerics.linear import Wavelet
 # from pisap.numerics.fourier import NFFT, FFT
-from pisap.numerics.cost import ssim, snr, psnr, nrmse
+# from pisap.numerics.cost import ssim, snr, psnr, nrmse
 from pisap.numerics.gridsearch import grid_search
 
 from pysap import info
@@ -46,7 +47,7 @@ from pysap.plugins.mri.reconstruct.linear import Wavelet2 as Wavelet
 from pysap.plugins.mri.reconstruct.fourier import FFT2 as FFT
 from pysap.plugins.mri.reconstruct.fourier import NFFT2 as NFFT
 
-
+from modopt.opt.metrics import ssim, snr, psnr,nrmse
 
 # local import
 from data import load_exbaboon_512_retrospection
@@ -85,6 +86,7 @@ def _gather_result(metric, metric_direction, list_kwargs, results):
 	list_metric = []
 	for res in results:
 		list_metric.append(res[2][metric]['values'][-1])
+
 	list_metric = np.array(list_metric)
 
 	# get best runs
@@ -98,7 +100,6 @@ def _gather_result(metric, metric_direction, list_kwargs, results):
 	best_params = {}
 
 	# reduce params kwargs
-	best_params['linear_kwargs'] = tmp_params['linear_kwargs']
 	best_params['max_nb_of_iter'] = tmp_params['max_nb_of_iter']
 	best_params['mu'] = tmp_params['mu']
 	try:
@@ -143,15 +144,22 @@ def _launch(sigma, mask_type, acc_factor, dirname, max_nb_of_iter, n_jobs,
 						},
 			   }
 
-	# principal gridsearch params grid
-	mu_list = list(np.logspace(-8, -1, 20))
-	nb_scales = [3, 4, 5]
+	# # principal gridsearch params grid
+	# mu_list = list(np.logspace(-8, -1, 20))
+	# nb_scales = [3, 4, 5]
+	# list_wts = ["MallatWaveletTransform79Filters",
+	# 			"UndecimatedBiOrthogonalTransform",
+	# 			"MeyerWaveletsCompactInFourierSpace",
+	# 			"BsplineWaveletTransformATrousAlgorithm",
+	# 			"FastCurveletTransform",
+	# 			]
+	# params tests
+	mu_list = list(np.logspace(-8, -1, 5))
+	nb_scales = [3, 4]
 	list_wts = ["MallatWaveletTransform79Filters",
 				"UndecimatedBiOrthogonalTransform",
-				"MeyerWaveletsCompactInFourierSpace",
-				"BsplineWaveletTransformATrousAlgorithm",
-				"FastCurveletTransform",
 				]
+
 
 	for wt in list_wts:
 
@@ -185,6 +193,7 @@ def _launch(sigma, mask_type, acc_factor, dirname, max_nb_of_iter, n_jobs,
 			'mu': mu_list,
 			'max_nb_of_iter': max_nb_of_iter,
 			'sigma': 0.1,
+			'metrics': metrics,
 			'verbose': verbose_reconstruction,
 		}
 
