@@ -17,7 +17,7 @@ import logging
 import tempfile
 import pickle
 from glob import glob
-from itertools import izip
+
 import numpy as np
 import scipy.fftpack as pfft
 import matplotlib.pyplot as plt
@@ -30,6 +30,11 @@ from pisap.utils import convert_locations_to_mask, convert_mask_to_locations
 
 # Local import
 from data import load_exbaboon_512_retrospection
+
+try:
+    from itertools import izip as zip
+except ImportError: # will be 3.x series
+    pass
 
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
@@ -69,7 +74,7 @@ def _get_metrics(dirname, verbose=False):
                 with open(noise_levels_file, 'r') as pfile:
                     report = pickle.load(pfile)
 
-                for metric_name, metric in report.iteritems():
+                for metric_name, metric in report.items():
                     if metric_name not in M[mask][acc_factor]:
                         M[mask][acc_factor][metric_name] = {}
                     if wt not in M[mask][acc_factor][metric_name]:
@@ -90,14 +95,14 @@ def _plot_metrics(M, output_dir, verbose=False):
     """ Save in .png the plots or bar plots of the metrics.
     """
     line_type = ["*-", "^-", "o-", "s-", "x-"]
-    for mask_name, mask in M.iteritems():
-        for acc_factor_name, acc_factor in mask.iteritems():
-            for metric_name, metric in acc_factor.iteritems():
+    for mask_name, mask in M.items():
+        for acc_factor_name, acc_factor in mask.items():
+            for metric_name, metric in acc_factor.items():
                 fig, ax = plt.subplots(figsize=(15, 15))
-                for idx, (wt_name, wts) in enumerate(metric.iteritems()):
+                for idx, (wt_name, wts) in enumerate(metric.items()):
                     x_values = np.array(list(wts))
                     y_values = np.array([report['best_value']
-                                        for report in wts.itervalues()])
+                                        for report in wts.values()])
 
                     do_barplot = True if (len(x_values) == 1) else False
 
@@ -174,7 +179,7 @@ def _f_atom_generator_from_loc(loc, p_size):
     """
     mask = convert_locations_to_mask(loc, p_size)
     x, y = np.where(mask != 0)
-    for coord in izip(x, y):
+    for coord in zip(x, y):
         f_atom = np.zeros((p_size, p_size), dtype=np.int)
         f_atom[coord] = 1
         yield pfft.ifft2(f_atom)
@@ -244,7 +249,7 @@ def _wavelets_runtimes(wt_list, nb_scale=3, nb_op=10):
     for wt_name in wt_list:
         wt = Wavelet(nb_scale=nb_scale, wavelet=wt_name)
         time_s = 0.0
-        for i in xrange(nb_op):
+        for i in range(nb_op):
             t0 = time.clock()
             coef = wt.op(ref)
             img = wt.adj_op(coef)
