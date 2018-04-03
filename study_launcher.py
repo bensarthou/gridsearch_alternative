@@ -34,7 +34,8 @@ import pprint
 # from pisap.numerics.linear import Wavelet
 # from pisap.numerics.fourier import NFFT, FFT
 # from pisap.numerics.cost import ssim, snr, psnr, nrmse
-from pisap.numerics.gridsearch import grid_search
+# from pisap.numerics.gridsearch import grid_search
+from pysap.base.gridsearch import grid_search
 
 from pysap import info
 ## Actual pysap reconstruct function

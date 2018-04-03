@@ -273,3 +273,97 @@ def sparse_rec_condatvu(data, wavelet_name, samples, nb_scales=4,
     linear_op.transform.analysis_data = unflatten(
         opt.y_final, linear_op.coeffs_shape)
     return x_final, linear_op.transform, opt.metrics
+
+
+def sparse_reconstruct_fista(
+        data, gradient_cls, gradient_kwargs, linear_cls, linear_kwargs,
+        mu, lambda_init=1.0, max_nb_of_iter=300, atol=1e-4,
+        metric_call_period=5, metrics={}, timeout=1200, verbose=0):
+    """ The Condat-Vu sparse reconstruction with reweightings.
+
+    Parameters
+    ----------
+    data: ndarray
+        the data to reconstruct: observation are expected in Fourier space.
+    gradient_cls: class
+        a derived 'GradBase' class.
+    gradient_kwargs: dict
+        the 'gradient_cls' parameters, the first parameter is the data to
+        be reconstructed.
+    linear_cls: class
+        a linear operator class.
+    linear_kwargs: dict
+        the 'linear_cls' parameters.
+    mu: float
+       coefficient of regularization.
+    lambda_init: float, (default 1.0)
+        initial value for the FISTA step.
+    max_nb_of_iter: int (optional, default 300)
+        the maximum number of iterations in the Condat-Vu proximal-dual
+        splitting algorithm.
+    atol: float (optional, default 1e-4)
+        tolerance threshold for convergence.
+    metric_call_period: int (default is 5)
+        the period on which the metrics are compute.
+    metrics: dict, {'metric_name': [metric, if_early_stooping],} (optional)
+        the list of desired convergence metrics.
+    timeout, int, (default 1200)
+        time-out option
+    verbose: int (optional, default 0)
+        the verbosity level.
+
+    Returns
+    -------
+    x_final: Image,
+        the estimated FISTA solution.
+    y_final: Dictionary,
+        the dictionary transformation estimated FISTA solution
+    metrics_list: list of Dict,
+        the convergence metrics
+    """
+    if verbose > 0:
+        print("Starting FISTA reconstruction algorithm.")
+
+    # Define the linear operator
+    linear_op = linear_cls(**linear_kwargs)
+
+    # Define the gradient operator
+    gradient_kwargs["linear_cls"] = linear_op
+    grad_op = gradient_cls(data, **gradient_kwargs)
+    lipschitz_cst = grad_op.spec_rad
+
+    if verbose > 0:
+        print(" - mu: ", mu)
+        print(" - lipschitz_cst: ", lipschitz_cst)
+        print("-" * 20)
+
+    # Init primal variable
+    shape = (grad_op.ft_cls.img_size, grad_op.ft_cls.img_size)
+    x_init = np.zeros(shape, dtype=np.complex)
+    alpha = linear_op.op(x_init)
+    alpha[...] = 0.0
+
+    # Define the proximity operator
+    weights = np.copy(alpha)
+    weights[...] = mu
+    prox_op = SoftThreshold(weights)
+
+    # Define the optimisation operator and by default add the cost function
+    # metric to be save
+    cost_func = SynthesisCost(data, grad_op, mu)
+    cost_func = {'cost_func': {'metric':cost_func,
+                               'mapping': {'x_new': None, 'y_new':'x'},
+                               'cst_kwargs':{},
+                               'early_stopping': False}}
+    metrics.update(cost_func)
+
+    opt = FISTA(x=alpha, grad=grad_op, prox=prox_op,
+                metric_call_period=metric_call_period, metrics=metrics,
+                verbose=verbose)
+
+    # Perform the reconstruction
+    opt.iterate(max_iter=max_nb_of_iter, timeout=timeout)
+
+    # Gather and return the result
+    linear_op.transform.analysis_data = opt.y_final
+    return Image(data=opt.x_final), linear_op.transform, opt.metrics
